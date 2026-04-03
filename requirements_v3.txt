@@ -1,0 +1,22 @@
+# Civilization-ABM v3 — Dependencias
+# Instalar con: pip install -r requirements_v3.txt
+
+# Core científico
+mesa>=3.0.0
+numpy>=1.26.0
+scipy>=1.12.0
+networkx>=3.2.0
+pandas>=2.1.0
+pyyaml>=6.0
+tqdm>=4.66.0
+matplotlib>=3.8.0
+
+# Aceleración numérica
+numba>=0.59.0        # JIT compilation para best_neighbor (10-100x speedup)
+
+# Paralelismo distribuido
+ray[default]>=2.10.0 # Reemplaza multiprocessing.Pool, escala a clusters
+
+# Calibración avanzada (opcional Paper 3)
+scikit-optimize>=0.9.0   # Bayesian optimization para calibración
+optuna>=3.6.0            # Alternativa moderna para hyperparameter search

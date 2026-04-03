@@ -1,0 +1,343 @@
+# Civilization-ABM v3 — Configuración de experimentos
+# Ajustado para Dell Vostro 5301: 4 cores, 8 GB RAM
+# N=1000 (2x Paper 2), paisaje 50x50, 2 workers paralelos
+
+global:
+  N: 1000               # 2x más que v2 (era 500)
+  steps: 1500
+  replications: 30      # estadísticamente válido, mitad de tiempo
+  seed_base: 42
+  n_jobs: 2             # máx 2 workers para proteger 8 GB RAM
+  landscape_width: 50   # escalado con N (era 35)
+  landscape_height: 50
+  growth_rate: 0.5
+  metabolism: 1.0
+  mutation_rate: 0.02
+  evolution_interval: 5
+
+conditions:
+  # -- Bloque A: Política fiscal ----------------------------------------
+  - name: baseline
+    initial_inequality: 0.8
+    tax_policy: null
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: flat_tax
+    initial_inequality: 0.8
+    tax_policy: flat
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: progressive_tax
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: prog_tax_floor
+    initial_inequality: 0.8
+    tax_policy: progressive
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: floor_only
+    initial_inequality: 0.8
+    tax_policy: null
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+
+  # -- Bloque B: Desigualdad inicial ------------------------------------
+  - name: ineq_low
+    initial_inequality: 0.3
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: ineq_med_low
+    initial_inequality: 0.5
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: ineq_med
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: ineq_high
+    initial_inequality: 1.2
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: ineq_very_high
+    initial_inequality: 1.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: ineq_extreme
+    initial_inequality: 2.5
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  # -- Bloque C: Topología de red ---------------------------------------
+  - name: net_small_world
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: net_scale_free
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: scale_free
+    landscape_peaks: 3
+
+  - name: net_random
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: random
+    landscape_peaks: 3
+
+  - name: net_none
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: null
+    landscape_peaks: 3
+
+  # -- Bloque D: Geografía del paisaje ----------------------------------
+  - name: landscape_k1
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 1
+
+  - name: landscape_k2
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 2
+
+  - name: landscape_k4
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 4
+
+  - name: landscape_k6
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 6
+
+  # -- Bloque E: Metabolismo base ---------------------------------------
+  - name: metabolism_low
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    metabolism: 0.5
+
+  - name: metabolism_med
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    metabolism: 1.0
+
+  - name: metabolism_high
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    metabolism: 2.0
+
+  # -- Bloque F: Interacciones clave ------------------------------------
+  - name: hi_ineq_scale_free
+    initial_inequality: 2.5
+    tax_policy: null
+    network_type: scale_free
+    landscape_peaks: 3
+
+  - name: hi_ineq_floor
+    initial_inequality: 1.8
+    tax_policy: null
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: max_stress
+    initial_inequality: 2.5
+    tax_policy: null
+    network_type: scale_free
+    landscape_peaks: 1
+    metabolism: 2.5
+
+  - name: max_resilience
+    initial_inequality: 0.3
+    tax_policy: progressive
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 4
+    metabolism: 0.5
+
+  - name: coop_landscape
+    initial_inequality: 0.5
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 4
+
+  - name: comp_landscape
+    initial_inequality: 1.5
+    tax_policy: flat
+    network_type: scale_free
+    landscape_peaks: 2
+
+  - name: high_chaos
+    initial_inequality: 2.0
+    tax_policy: null
+    network_type: random
+    landscape_peaks: 1
+
+  - name: welfare_state
+    initial_inequality: 0.5
+    tax_policy: progressive
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+
+  # -- Bloque G: Sensibilidad OAT ---------------------------------------
+  - name: slow_growth
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    growth_rate: 0.1
+
+  - name: fast_growth
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    growth_rate: 2.0
+
+  - name: high_mutation
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    mutation_rate: 0.10
+
+  - name: low_mutation
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    mutation_rate: 0.005
+
+  - name: fast_evolution
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    evolution_interval: 1
+
+  - name: slow_evolution
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    evolution_interval: 20
+
+  - name: large_N
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    N: 2000              # reducido de 10000 a 2000 (límite RAM)
+
+  # -- Bloque I: Memoria de agentes (nuevo — inspirado en MiroFish) ----
+  # Compara dinámica con/sin memoria para RQ6 y RQ7
+  - name: memory_baseline
+    initial_inequality: 0.8
+    tax_policy: null
+    network_type: small_world
+    landscape_peaks: 3
+    use_memory: true
+
+  - name: memory_progressive
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+    use_memory: true
+
+  - name: memory_scale_free
+    initial_inequality: 0.8
+    tax_policy: progressive
+    network_type: scale_free
+    landscape_peaks: 3
+    use_memory: true
+
+  - name: memory_hi_ineq
+    initial_inequality: 1.8
+    tax_policy: null
+    network_type: small_world
+    landscape_peaks: 3
+    use_memory: true
+
+  - name: memory_floor
+    initial_inequality: 0.8
+    tax_policy: null
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+    use_memory: true
+
+  - name: memory_welfare
+    initial_inequality: 0.5
+    tax_policy: progressive
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 3
+    use_memory: true
+
+  # -- Bloque H: Calibración Banco Mundial ------------------------------
+  - name: wb_nordic
+    initial_inequality: 0.3
+    tax_policy: progressive
+    enforce_floor: true
+    network_type: small_world
+    landscape_peaks: 4
+    metabolism: 0.5
+
+  - name: wb_european
+    initial_inequality: 0.6
+    tax_policy: progressive
+    network_type: small_world
+    landscape_peaks: 3
+
+  - name: wb_usa
+    initial_inequality: 1.0
+    tax_policy: flat
+    network_type: scale_free
+    landscape_peaks: 3
+
+  - name: wb_latam
+    initial_inequality: 1.5
+    tax_policy: flat
+    network_type: scale_free
+    landscape_peaks: 2
+
+  - name: wb_south_africa
+    initial_inequality: 2.5
+    tax_policy: null
+    network_type: scale_free
+    landscape_peaks: 1
+    metabolism: 2.0

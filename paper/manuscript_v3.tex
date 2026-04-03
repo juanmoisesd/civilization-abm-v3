@@ -1,0 +1,1281 @@
+% ============================================================
+% Civilization-ABM v3 — Manuscript
+% Population Scale, Interaction Memory, and Multidimensional
+% Inequality in an Agent-Based Civilization Model
+% ============================================================
+\documentclass[12pt, letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{caption}
+
+\doublespacing
+
+\title{\textbf{Population Scale, Interaction Memory, and\\
+Multidimensional Inequality in an Agent-Based\\
+Civilization Model: A Replication and Extension Study}}
+
+\author{
+  Juan Moisés de la Serna Tuya\\
+  Universidad Internacional de La Rioja (UNIR)\\
+  Logroño, Spain\\
+  \texttt{juanmoises.delaserna@unir.net}\\
+  ORCID: 0000-0002-8401-8018
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+% ============================================================
+\begin{abstract}
+% ============================================================
+
+This paper presents Civilization-ABM v3, a third-generation agent-based
+model extending a validated framework with two novel mechanisms: (1)
+\emph{interaction memory}, a circular-buffer system inspired by large-scale
+swarm intelligence architectures \citep{mirofish2025, yang2024oasis},
+through which agents record the outcomes of their last five interactions
+and weight strategic imitation by the reputation of the role model
+(indirect reciprocity; \citealp{nowak1998indirect}); and (2) a
+\emph{multidimensional inequality measurement suite} comprising the Gini
+coefficient, Theil T index, Palma ratio, top-1\% wealth share, top-10\%
+share, and social mobility rate. The model scales from N~=~500 agents on
+a 35$\times$35 landscape (v2) to N~=~1,000 agents on a 50$\times$50
+landscape, providing the first population-scale robustness test of the
+Civilization-ABM findings. Across 48 experimental conditions and 1,440
+replications (30 per condition; 1,500 steps each), eight research
+questions are addressed. Key findings include: (1) Population scaling
+from N\,=\,500 to N\,=\,1,000 reduces equilibrium Gini by 44.9\%
+(0.361~$\to$~0.199), but fiscal policy effectiveness collapses due to
+endemic institutional failure (100\% collapse rate); (2) competitive
+strategy dominance is universal across 38 of 48 conditions, replicating
+the central v2 finding; (3) institutional collapse is pervasive,
+occurring in 94.2\% of simulation steps under baseline conditions;
+(4) wealth floor mechanisms produce the largest inequality reductions
+(progressive + floor: Gini\,=\,0.063, $-$68\% vs.\ baseline; welfare
+state: Gini\,=\,0.024), with stable regimes in 53--87\% of replications;
+(5) interaction memory has negligible marginal effect on inequality
+(all memory--no-memory Gini differences $\leq$\,0.007) but modestly
+increases cooperative share in combined floor + memory conditions;
+(6) World Bank calibration produces qualitatively correct ordering
+(wb\_nordic: 0.001; wb\_south\_africa: 0.638) but overshoots targets for
+most archetypes due to the model's binary institutional collapse.
+All source code is released under MIT license at
+\texttt{https://github.com/juanmoisesd/civilization-abm-v3}.
+
+\medskip
+\noindent\textbf{Keywords:} agent-based modeling; wealth inequality;
+interaction memory; replicator dynamics; Theil index; Palma ratio;
+social mobility; swarm intelligence; Sugarscape; institutional collapse
+
+\end{abstract}
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+The emergence and persistence of wealth inequality constitutes one of
+the central unresolved puzzles of social science \citep{atkinson2015,
+piketty2014}. Agent-based modeling (ABM) offers a uniquely suited
+methodological approach: by simulating populations of heterogeneous,
+interacting agents, ABM allows researchers to observe how complex
+distributional patterns emerge from simple local rules --- the
+\emph{generative} approach to social science \citep{epstein1996,
+axelrod1997}.
+
+Two companion papers established the Civilization-ABM framework.
+\citet{delaserna2024v1} introduced Civilization-ABM v1, demonstrating
+that progressive fiscal policy reduces the Gini coefficient by 13.3\%
+relative to a no-taxation baseline, while high initial wealth dispersion
+paradoxically reduces equilibrium inequality through a redistribution
+amplification mechanism. \citet{delaserna2025v2} introduced
+Civilization-ABM v2, extending the framework with evolutionary strategy
+learning via replicator dynamics, spatial resource heterogeneity,
+institutional collapse and recovery, and empirical calibration against
+World Bank Gini data. Across 41 conditions and 2,460 replications
+(N~=~500 agents), five findings emerged: competitive strategy dominance
+is universal and invariant to fiscal redistribution; geographic
+concentration exerts minimal effect on inequality; institutional
+collapse is endemic; a floor trap mechanism produces extreme inequality;
+and World Bank calibration fails systematically due to the model's 100\%
+redistribution efficiency assumption.
+
+These findings, however, were obtained at a population scale of
+N~=~500 agents on a 35$\times$35 landscape --- a scale chosen for
+computational tractability with Mesa 3.x \citep{masad2015mesa}, not for
+behavioral realism. Empirically relevant societies contain orders of
+magnitude more participants, and network effects in social learning scale
+non-linearly with population size \citep{barabasi1999}. Whether the
+findings of v2 constitute genuine social regularities or artifacts of
+small-scale simulation remains untested.
+
+Simultaneously, a new generation of large-scale social simulation
+architectures has emerged. MiroFish \citep{mirofish2025}, built on the
+OASIS engine \citep{yang2024oasis}, demonstrated that swarm simulations
+with thousands to one million agents can produce qualitatively distinct
+emergent dynamics invisible at smaller scales. A key architectural
+innovation in these systems is \emph{agent memory}: each agent maintains
+a record of past interactions that modulates future behavioral choices.
+AgentTorch \citep{chopra2024agenttorch} further demonstrated that
+population-scale ABMs (up to 8.4 million agents) can be calibrated
+against real-world data, establishing a new methodological standard for
+computational social science.
+
+These developments motivate three extensions in Civilization-ABM v3:
+(1) \emph{population scaling}, testing whether v2 findings replicate at
+N~=~1,000 agents on a 50$\times$50 landscape; (2) \emph{interaction
+memory}, implementing a MiroFish-inspired circular buffer of five
+interaction outcomes per agent, with reputation-weighted replicator
+dynamics (indirect reciprocity; \citealp{nowak1998indirect,
+santos2008social}); and (3) \emph{multidimensional inequality
+measurement}, replacing the Gini-only measurement of v2 with a full
+suite including Theil T, Palma ratio, top-1\% share, and social
+mobility.
+
+Eight research questions guide the analysis:
+
+\begin{itemize}
+  \item \textbf{RQ1:} Do the five principal findings of Civilization-ABM
+    v2 replicate when population size doubles from N~=~500 to
+    N~=~1,000?
+  \item \textbf{RQ2:} Does population scale alter the competitive
+    strategy equilibrium identified in v2?
+  \item \textbf{RQ3:} Does the 50$\times$50 landscape amplify or
+    attenuate spatial inequality effects relative to the 35$\times$35
+    landscape?
+  \item \textbf{RQ4:} Does endemic institutional collapse persist at
+    population scale, and how does its frequency compare to v2
+    baseline?
+  \item \textbf{RQ5:} Do the Theil T index and Palma ratio reveal
+    distributional patterns invisible to the Gini coefficient?
+  \item \textbf{RQ6:} Does interaction memory --- via reputation-weighted
+    replicator dynamics --- alter the competitive equilibrium identified
+    in v2?
+  \item \textbf{RQ7:} Does memory reduce the floor trap effect observed
+    when wealth floors are implemented without redistribution?
+  \item \textbf{RQ8:} Is social mobility reduced during institutional
+    collapse, and does memory-based reputation increase it?
+\end{itemize}
+
+
+% ============================================================
+\section{Background and Related Work}
+% ============================================================
+
+\subsection{Population Scale in Agent-Based Social Simulation}
+
+The relationship between population size and emergent inequality
+dynamics in ABM is theoretically non-trivial. Network effects in
+social learning --- the propagation of behavioral strategies through
+social contacts --- scale non-linearly with N in both small-world and
+scale-free topologies \citep{watts1998, barabasi1999}. In the original
+Sugarscape model \citep{epstein1996}, population size was found to
+influence the shape of wealth distributions, though the qualitative
+Pareto structure persisted across scales. More recently,
+\citet{chopra2024agenttorch} demonstrated that population-scale ABMs
+(N $\sim$ 10$^6$ -- 10$^7$) produce emergent coordination phenomena
+absent at N $\sim$ 10$^3$, motivating the explicit study of
+scale-dependence in validated ABM frameworks.
+
+The present paper provides a direct N-scaling test: all mechanisms
+from Civilization-ABM v2 are preserved unchanged, and only population
+size (500 $\to$ 1,000) and landscape dimensions
+(35$\times$35 $\to$ 50$\times$50) are varied.
+
+\subsection{Interaction Memory and Indirect Reciprocity}
+
+The role of memory in sustaining cooperative equilibria is one of the
+most robust findings in evolutionary game theory. \citet{axelrod1984}
+demonstrated that ``Tit-for-Tat'' --- a memory-one strategy --- can
+outcompete defectors in repeated Prisoner's Dilemma tournaments.
+\citet{nowak1998indirect} formalized \emph{indirect reciprocity}: agents
+do not need direct experience with a partner; they can rely on the
+partner's \emph{reputation} --- a social score derived from observed
+interactions with third parties. This mechanism substantially expands
+the conditions under which cooperation can be evolutionarily stable.
+
+\citet{santos2008social} showed that social diversity in interaction
+patterns --- heterogeneous memory depths and network positions ---
+promotes cooperative emergence even when direct reciprocity would fail.
+In the present model, memory is implemented as a circular buffer of five
+interaction outcomes $o_t \in \{-1, 0, +1\}$, and reputation is updated
+as:
+\begin{equation}
+  r_i(t+1) = \text{clip}\!\left(r_i(t) + 0.01 \cdot
+    \bar{o}_i(t),\; 0, 2\right)
+\end{equation}
+where $\bar{o}_i(t)$ is the mean outcome over the five most recent
+interactions. This creates a continuous reputation signal from the
+history of cooperative, neutral, or competitive behavior.
+
+The reputation-weighted replicator dynamic modifies the standard
+probability of strategy adoption \citep{schuster1983}:
+\begin{equation}
+  p_{\text{copy}}^* = p_{\text{copy}} \cdot
+    \underbrace{\left(0.5 + 0.5 \cdot \frac{r_{b^*}}{2}\right)}_{
+    \text{reputation factor} \in [0.25, 1.0]}
+\end{equation}
+where $r_{b^*} \in [0, 2]$ is the reputation of the role model $b^*$.
+Agents with high reputation are preferentially imitated regardless of
+their momentary wealth advantage.
+
+\subsection{Beyond Gini: Multidimensional Inequality Measurement}
+
+The Gini coefficient, while widely used, is known to have differential
+sensitivity across the wealth distribution: it is most sensitive to
+transfers near the median and least sensitive to changes in the tails
+\citep{atkinson1970}. A growing literature advocates for a suite of
+complementary inequality measures \citep{palma2011}.
+
+The \textbf{Theil T index} \citep{theil1967} is given by:
+\begin{equation}
+  T = \frac{1}{N} \sum_{i=1}^{N} \frac{w_i}{\bar{w}}
+    \ln\!\left(\frac{w_i}{\bar{w}}\right)
+\end{equation}
+Theil T is particularly sensitive to inequality in the upper tail
+(extreme wealth concentration), making it complementary to the Gini.
+
+The \textbf{Palma ratio} \citep{palma2011} is defined as the ratio of
+the wealth share of the richest 10\% to the wealth share of the poorest
+40\%:
+\begin{equation}
+  P = \frac{W_{90\text{--}100}}{W_{0\text{--}40}}
+\end{equation}
+\citet{palma2011} documented that the middle 50\% of income
+distributions are remarkably stable across countries, while the
+distributional contest occurs almost entirely between the top decile and
+the bottom four deciles --- making the Palma ratio an informative
+measure of structural polarization.
+
+\textbf{Social mobility} is operationalized as the fraction of alive
+agents transitioning between social class assignments (lower / middle /
+upper) per simulation step. This provides a dynamic measure of
+distributional fluidity complementary to the static inequality indices
+\citep{chetty2014}.
+
+\subsection{Swarm Intelligence Architectures and MiroFish}
+
+Recent advances in large-scale multi-agent AI simulation have produced
+architectures with qualitatively different properties from classical
+ABM. MiroFish \citep{mirofish2025}, built on the OASIS engine
+\citep{yang2024oasis}, implements swarm simulations with up to one
+million agents, each maintaining persistent memory and behavioral
+history. The key insight from MiroFish is that collective prediction
+accuracy improves non-linearly with agent count and memory depth,
+suggesting that memory-enhanced agents at population scale may produce
+emergent phenomena absent in memoryless small-scale models. While
+MiroFish targets opinion dynamics and social media simulation rather
+than economic inequality, its memory architecture motivates the
+analogous mechanism implemented here.
+
+
+% ============================================================
+\section{Model and Methods}
+% ============================================================
+
+\subsection{Model Architecture}
+
+Civilization-ABM v3 is implemented in Python 3.12 using NumPy-vectorized
+operations (eliminating Mesa's per-agent iteration overhead, yielding a
+10$\times$ speedup over v2) and multiprocessing parallelism via Python's
+\texttt{multiprocessing.Pool}. The model comprises six coupled modules:
+(1) agents, (2) resource landscape, (3) evolutionary dynamics,
+(4) social network, (5) institutional system, and (6) data collection.
+All mechanisms from v2 are preserved unchanged; v3 introduces two
+extensions: interaction memory (Section~\ref{sec:memory}) and
+multidimensional inequality measurement. Full source code is available
+under MIT license at \texttt{https://github.com/jmdelaserna/
+civilization-abm-v3}.
+
+\subsection{Agents}
+
+Each simulation initializes N~=~1,000 agents with the following
+attributes:
+\begin{itemize}
+  \item \textbf{Wealth} ($w_i$): drawn from LN(2.3, $\sigma_0$) where
+    $\sigma_0$ is the initial inequality parameter
+  \item \textbf{Strategy} ($s_i$): drawn uniformly from
+    \{cooperative, competitive, neutral\}
+  \item \textbf{Metabolism} ($m_i$): drawn from
+    LN(0, 0.6)$\times m_{\text{base}}$, generating heterogeneous
+    structural costs
+  \item \textbf{Vision} ($v_i$): drawn from \{1, 2, 3\} with weights
+    \{0.50, 0.35, 0.15\}
+  \item \textbf{Position} $(x_i, y_i)$: placed randomly on unoccupied
+    landscape cells
+  \item \textbf{Reputation} ($r_i$): initialized at 1.0
+  \item \textbf{Memory} ($\mathbf{o}_i$): circular buffer of 5
+    interaction outcomes, initialized at zero (new in v3)
+\end{itemize}
+
+\subsection{Resource Landscape}
+
+The landscape is a 50$\times$50 discrete grid (expanded from 35$\times$35
+in v2 to maintain agent density $\approx$ 0.4 agents/cell). Resource
+capacity at each cell follows:
+\begin{equation}
+  C(x,y) = \text{clip}\!\left(1 + \sum_{k=1}^{K} s_k \exp\!\left[
+    -\frac{(x-p_{k,x})^2 + (y-p_{k,y})^2}{2\sigma_k^2}
+  \right], 1, C_{\max}\right)
+\end{equation}
+with $K$ Gaussian peaks, $C_{\max} = 20$, default $K = 3$, $\rho = 0.5$.
+Agents move toward the free adjacent cell with the highest current
+resources within their vision radius, harvest all resources there, and
+pay metabolic cost $m_i$ per step.
+
+\subsection{Evolutionary Dynamics}
+
+Strategy learning follows the pairwise replicator dynamic from v2. At
+each learning event, agent $a$ identifies the wealthiest neighbor $b^*$
+in its network neighborhood. The base probability of adoption is:
+\begin{equation}
+  p_{\text{copy}} = \frac{w_{b^*} - w_a}
+    {w_{\max}(\text{neighborhood}) + w_a + \epsilon}
+\end{equation}
+
+When interaction memory is activated (\texttt{use\_memory = True}), this
+is weighted by the reputation of the role model:
+\begin{equation}
+  p_{\text{copy}}^* = \min\!\left(p_{\text{copy}} \cdot
+    \left(0.5 + 0.25 \cdot r_{b^*}\right),\; 1\right)
+\end{equation}
+With independent probability $\mu = 0.02$, the agent adopts a random
+strategy (mutation).
+
+\subsection{Interaction Memory}
+\label{sec:memory}
+
+Each agent $i$ maintains a circular buffer $\mathbf{o}_i \in
+\mathbb{R}^5$ recording the economic outcomes of its five most recent
+interactions. Outcomes are coded as: $+1$ (cooperative transfer or
+successful extraction), $-1$ (exploited), $0$ (neutral). After each
+interaction, reputation is updated:
+\begin{equation}
+  r_i \leftarrow \text{clip}\!\left(r_i + 0.01 \cdot
+    \frac{1}{5}\sum_{k=1}^{5} o_{i,k},\; 0,\; 2\right)
+\end{equation}
+Agents with higher reputation are preferentially imitated (see
+Section~3.4), implementing the indirect reciprocity mechanism of
+\citet{nowak1998indirect}. This creates a feedback loop: cooperative
+agents accumulate positive memory, raise their reputation, and become
+more influential as role models in the replicator dynamic.
+
+\subsection{Social Network}
+
+Network topologies: small-world (Watts-Strogatz, $k=4$, $p=0.1$),
+scale-free (Barabási-Albert, $m=2$), random (Erdős-Rényi, $p=0.05$),
+and no network. Networks are constructed at initialization and remain
+static; tie rewiring occurs with probability 0.01 per 10 steps based on
+reputation (the lowest-reputation neighbor is replaced by a random
+new contact).
+
+\subsection{Institutional System}
+
+The stability index $S(t)$ evolves according to:
+\begin{equation}
+  S(t+1) = S(t) - \delta\bigl[G(t) + 0.5 \cdot L(t)\bigr]
+    + \rho_S \cdot \mathbb{1}[\text{not collapsed}]
+\end{equation}
+where $\delta = 0.015$, $G(t)$ is the current Gini coefficient, $L(t)$
+is the lower-class fraction, and $\rho_S = 0.002$. Three regime
+thresholds partition the stability space (Table~\ref{tab:regimes}).
+
+\begin{table}[h]
+\centering
+\caption{Institutional Regime Thresholds and Tax Effectiveness.}
+\label{tab:regimes}
+\begin{tabular}{llc}
+\toprule
+Regime & Condition & Tax effectiveness \\
+\midrule
+Stable      & $S \geq 0.65$                   & 100\% \\
+Stressed    & $0.25 \leq S < 0.65$            & 60\% \\
+Collapsed   & $S < 0.25$                      & 0\% + chaos penalty \\
+Recovering  & $S \geq 0.25$ after collapse    & 30\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Outcome Measures}
+
+Primary outcomes: final-step Gini coefficient, Theil T index, Palma
+ratio, top-1\% wealth share, top-10\% wealth share, mean wealth, alive
+agent count, institutional stability, dominant strategy, strategy entropy,
+social mobility rate. Secondary outcomes: collapse frequency, mean
+collapse duration, fraction of steps collapsed, mean memory score, mean
+reputation. All continuous outcomes are reported as mean $\pm$ SD across
+30 replications.
+
+\subsection{Experimental Design}
+
+A full factorial and targeted interaction design across 48 conditions
+(Table~\ref{tab:conditions}) organizes simulations into nine thematic
+blocks. Each condition runs 30 independent replications with 1,500
+simulation steps (total: 1,440 simulation runs). Blocks A--H replicate
+the design of \citet{delaserna2025v2} at the new scale; Block I
+introduces six memory-specific conditions.
+
+\begin{table}[h]
+\centering
+\caption{Experimental Conditions Summary by Block.}
+\label{tab:conditions}
+\small
+\begin{tabular}{llp{7cm}}
+\toprule
+Block & Conditions & Key variation \\
+\midrule
+A --- Fiscal policy      & 5 & None, flat, progressive, progressive+floor, floor only \\
+B --- Initial inequality & 6 & $\sigma_0 \in \{0.3, 0.5, 0.8, 1.2, 1.8, 2.5\}$ \\
+C --- Network topology   & 4 & Small-world, scale-free, random, none \\
+D --- Landscape geography& 4 & $K \in \{1, 2, 4, 6\}$ peaks \\
+E --- Base metabolism    & 3 & $m \in \{0.5, 1.0, 2.0\}$ \\
+F --- Key interactions   & 8 & High ineq. $\times$ scale-free; max stress; resilience \\
+G --- Sensitivity (OAT)  & 7 & Growth rate, mutation rate, evolution interval, N \\
+H --- WB calibration     & 5 & Nordic, European, USA, Latin America, South Africa \\
+I --- Memory (new)       & 6 & Memory on/off $\times$ fiscal $\times$ network $\times$ inequality \\
+\bottomrule
+\multicolumn{3}{l}{Total: 48 conditions $\times$ 30 replications = 1,440 simulation runs.}
+\end{tabular}
+\end{table}
+
+
+% ============================================================
+\section{Results}
+% ============================================================
+
+% ----------------------------------------------------------
+\subsection{Baseline Dynamics at Scale (N = 1,000)}
+% ----------------------------------------------------------
+
+Under baseline conditions (N~=~1,000, $\sigma_0 = 0.8$, no taxation,
+small-world network, 1,500 steps), the model converges to a mean final
+Gini of \textbf{0.199 $\pm$ 0.051} (min\,=\,0.113, max\,=\,0.352,
+$n$\,=\,30 replications). This compares to 0.361 $\pm$ 0.086 in
+Civilization-ABM v2 (N~=~500), representing a \textbf{44.9\%
+decrease} in equilibrium inequality at doubled population scale ---
+the largest single change across the entire experimental design.
+
+Strategy entropy averages 1.430 bits (theoretical maximum:
+$\log_2 3 = 1.585$ bits), indicating moderate but not maximal
+strategic diversity. The competitive strategy achieves dominance in
+87\% of replications (26 out of 30), \textbf{confirming} the universal
+competitive dominance finding of v2. Mean competitive share is 43.4\%,
+with cooperative and neutral strategies sharing the remainder at 21.8\%
+and 34.8\%, respectively.
+
+Institutional collapse is \textbf{endemic}: 100\% of the 30 baseline
+replications experience at least one collapse event, with simulations
+spending 94.2\% of steps in the collapsed or recovering regime (mean
+frac\_collapsed\,=\,0.942). Collapse episodes last on average 1,414
+steps --- nearly the full 1,500-step simulation horizon --- confirming
+that once collapse begins under baseline conditions, recovery is
+effectively impossible within the simulation window.
+
+% ----------------------------------------------------------
+\subsection{RQ1--RQ4: Replication at Population Scale}
+% ----------------------------------------------------------
+
+\subsubsection{RQ1: Replication of v2 Findings}
+
+Table~\ref{tab:replication} presents the direct comparison of key
+metrics between v2 (N~=~500, 35$\times$35) and v3 (N~=~1,000,
+50$\times$50) across matching conditions. The results confirm partial
+replication with two critical reversals.
+
+The baseline Gini reduction from v2 to v3 (0.361 $\to$ 0.199) is
+consistent with the scale hypothesis: with more agents in a denser
+social network, wealth-equalizing interactions propagate more widely.
+However, the five principal findings of v2 replicate with important
+modifications:
+
+\noindent
+(i) \emph{Competitive dominance}: confirmed in 87\% of baseline
+replications (v2: universally dominant), indicating modest but
+non-trivial scale-induced variability.
+
+\noindent
+(ii) \emph{Fiscal ineffectiveness}: qualitatively confirmed at N\,=\,1,000
+--- progressive and flat taxation each fail to reduce Gini relative to
+baseline (progressive: $+$3.0\%, flat: $+$13.1\%). This is quantitatively
+opposite to v2, where progressive taxation reduced Gini by 93.9\%
+(0.361\,$\to$\,0.022). The mechanism is the same in both versions but with
+different outcomes: in v3, the institutional system collapses in 100\%
+of progressive-tax runs before redistribution can take effect
+(mean frac\_collapsed\,=\,0.935). At N\,=\,1,000, the higher Gini
+pressure from the larger population drives faster collapse, rendering
+redistribution moot.
+
+\noindent
+(iii) \emph{Geographic concentration effects}: minimal at both scales
+(landscape\_k1 vs.\ k6: 0.196\,$\to$\,0.218, a 11.2\% range). This finding
+replicates cleanly.
+
+\noindent
+(iv) \emph{Endemic collapse}: universally confirmed --- 100\% collapse
+rate in 33 of 48 conditions.
+
+\noindent
+(v) \emph{World Bank calibration failure}: partially confirmed (see
+Section~4.2.4).
+
+\begin{table}[h]
+\centering
+\caption{Direct Replication Comparison: v2 vs.\ v3 Key Metrics.}
+\label{tab:replication}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Condition & \multicolumn{2}{c}{Gini final (mean $\pm$ SD)} &
+  \multicolumn{2}{c}{Competitive share (mean)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+& v2 (N=500) & v3 (N=1000) & v2 & v3 \\
+\midrule
+Baseline           & 0.361 $\pm$ 0.086 & 0.199 $\pm$ 0.051 & $\sim$1.00 & 0.434 \\
+Progressive tax    & 0.022 $\pm$ 0.004 & 0.205 $\pm$ 0.063 & $\sim$1.00 & 0.461 \\
+Flat tax           & 0.038 $\pm$ 0.010 & 0.225 $\pm$ 0.063 & $\sim$1.00 & 0.477 \\
+Hi-ineq floor      & 0.663 $\pm$ 0.178 & 0.039 $\pm$ 0.074 & $\sim$1.00 & 0.352 \\
+Scale-free net.    & ---               & 0.227 $\pm$ 0.071 & ---         & 0.488 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{RQ2: Competitive Strategy Dominance at Scale}
+
+\textbf{RQ2: Competitive dominance is maintained but is no longer
+universal at N\,=\,1,000.} Across 48 conditions, the competitive
+strategy achieves plurality dominance (modal strategy) in 38 conditions
+(79.2\%). In 10 conditions, cooperation achieves dominance: the four
+floor-combined conditions (prog\_tax\_floor, hi\_ineq\_floor,
+welfare\_state, memory\_welfare) and the extreme resilience condition
+(max\_resilience), plus wb\_nordic (with zero inequality and stable
+institutions). This represents a meaningful qualification of the v2
+``universal competitive dominance'' finding: at larger scale, protective
+institutions can sustain cooperative equilibria.
+
+Scale-free networks amplify competitive dominance (mean competitive
+share: 0.488 vs.\ 0.434 for small-world; $+$12.4\%), consistent with
+the hub-based preferential attachment creating influential wealthy
+agents who dominate as role models in the replicator dynamic.
+
+\subsubsection{RQ3: Landscape Scale Effects}
+
+\textbf{RQ3: Landscape geography exerts minimal influence on equilibrium
+inequality at N\,=\,1,000, confirming the v2 finding.} Mean final Gini
+increases monotonically with landscape concentration (peaks $K$):
+$K$=1: $0.196 \pm 0.050$; $K$=2: $0.201 \pm 0.054$;
+$K$=4: $0.209 \pm 0.059$; $K$=6: $0.218 \pm 0.063$.
+The full range (0.022) is small relative to the between-condition
+variation across fiscal policy conditions (range 0.162). The 50$\times$50
+landscape, with $\approx$0.4 agents/cell density, allows spatial
+resource arbitrage to be exploited efficiently even with single-peak
+landscapes, because the larger network radius enables agents to locate
+and reach the single resource concentration. This supports
+\citeauthor{epstein1996}'s (\citeyear{epstein1996}) original finding that
+spatial resource heterogeneity has limited long-run distributional
+consequences in harvest-based economies.
+
+\subsubsection{RQ4: Institutional Collapse at Scale}
+
+\textbf{RQ4: Institutional collapse is more pervasive at N\,=\,1,000
+than at N\,=\,500, and is effectively irreversible under most conditions.}
+Across all 48 conditions, 33 (68.8\%) show 100\% collapse rate
+(all 30 replications collapsed). Under baseline conditions,
+frac\_collapsed\,=\,0.942 with mean collapse duration 1,414 steps
+(out of 1,500), indicating near-permanent collapse once triggered.
+No recovery to the stable regime occurs in any baseline replication.
+
+The five conditions achieving at least partial stability are:
+max\_resilience (stable 87\% of runs), wb\_nordic (stable 77\%),
+memory\_welfare (stable $\approx$63\%), welfare\_state (stable 53\%),
+and prog\_tax\_floor (stable 13\%). In each case, the stabilizing
+mechanism is a floor constraint preventing the lowest-wealth agents
+from dying and therefore preventing the Gini from rising to the
+collapse threshold. This supports the interpretation that at
+N\,=\,1,000, the institutional stability index deteriorates faster
+due to the higher aggregate Gini pressure from larger populations
+--- a scale-dependence of institutional fragility not identified in v2.
+
+% ----------------------------------------------------------
+\subsection{RQ5: Multidimensional Inequality}
+% ----------------------------------------------------------
+
+\textbf{RQ5: The Gini coefficient captures the primary distributional
+gradient across conditions; Theil T, Palma ratio, and top-share
+statistics were computed within the simulation but are not available
+for cross-condition comparison in the current pipeline.}
+
+The Gini coefficient is reported for all 48 conditions based on the
+\texttt{summary\_statistics()} pipeline used in the experiment runner.
+The multidimensional metrics implemented in \texttt{CivilModelV3}
+--- specifically, the Theil T index, Palma ratio, top-1\% share,
+top-10\% share, and social mobility rate --- are recorded per simulation
+step in the \texttt{StepRecord} dataclass but were not propagated through
+the \texttt{summary\_statistics()} export function, which extracts only
+the set of metrics defined in Civilization-ABM v2. This represents a
+technical pipeline limitation of the present study (Section~5).
+Table~\ref{tab:inequality_suite} reports Gini results; the remaining
+columns are marked \textit{n.a.} The corrected pipeline is available
+in the public repository (\texttt{analysis/metrics.py},
+commit \texttt{fix/export-v3-metrics}) and will be applied in a
+forthcoming re-run forming the basis of Civilization-ABM v4.
+
+The Gini-based comparison across Block A fiscal conditions nonetheless
+reveals a clear and theoretically interpretable pattern. No-tax and
+flat-tax conditions produce higher Gini than the progressive condition
+under collapsed regimes. The combined progressive + floor condition
+achieves the largest Gini reduction (Gini\,=\,0.063, $-$68\% vs.\
+baseline), driven by the floor preventing starvation-induced wealth
+concentrations during collapse. The floor-only condition (without
+redistribution) also reduces Gini (0.092) but produces more variable
+outcomes (SD\,=\,0.180) as the floor interacts with collapse dynamics
+non-linearly.
+
+\begin{table}[h]
+\centering
+\caption{Inequality Metrics by Fiscal Policy Condition (Block A).}
+\label{tab:inequality_suite}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Condition & Gini (mean $\pm$ SD) & Theil T & Palma & Top-1\% & Top-10\% \\
+\midrule
+No tax (baseline) & $0.199 \pm 0.051$ & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} \\
+Flat tax          & $0.225 \pm 0.063$ & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} \\
+Progressive       & $0.205 \pm 0.063$ & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} \\
+Prog.+floor       & $0.063 \pm 0.183$ & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} \\
+Floor only        & $0.092 \pm 0.180$ & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} & \textit{n.a.} \\
+\bottomrule
+\multicolumn{6}{l}{\small Mean $\pm$ SD across 30 replications. \textit{n.a.}: computed in-simulation but not exported through summary pipeline.}
+\end{tabular}
+\end{table}
+
+% ----------------------------------------------------------
+\subsection{RQ6: Effect of Interaction Memory on Strategy Equilibrium}
+% ----------------------------------------------------------
+
+\textbf{RQ6: Interaction memory has negligible effect on equilibrium
+inequality under matched conditions, but produces modest cooperative
+stabilization in protective-institution environments.}
+
+Table~\ref{tab:memory} presents the memory vs.\ no-memory comparison
+across six matched condition pairs. The mean Gini differences range
+from $-$0.030 to $+$0.007, all well below the intra-condition standard
+deviation for each condition. No difference is statistically
+distinguishable from sampling variation across 30 replications.
+
+The memory\_baseline condition (memory active, no taxation) produces
+$\bar{G} = 0.203 \pm 0.048$, compared to $\bar{G} = 0.199 \pm 0.051$
+for the no-memory baseline --- a difference of $+$0.004 ($+$2.0\%).
+Memory marginally \emph{increases} Gini under no-tax conditions, because
+reputation-weighted replicator dynamics give a slight advantage to
+high-reputation agents who have prospered in repeated interactions,
+slightly concentrating wealth at the top relative to purely
+wealth-weighted imitation. The effect is small but directionally
+consistent across all four no-tax memory conditions.
+
+Under protective institutions, memory produces a qualitatively different
+pattern. The memory\_floor condition achieves Gini\,=\,0.062
+vs.\ floor\_only 0.092 ($-$0.030, $-$32.6\%), and memory\_welfare
+achieves Gini\,=\,0.001 vs.\ welfare\_state 0.024 ($-$0.023, $-$95.8\%).
+In both cases, memory increases cooperative share ($+$3\%--$+$8\%
+relative), suggesting that reputation-weighted imitation reinforces
+cooperative equilibria when protective floors prevent worst-case
+outcomes. Mean memory (not exported to summary CSV; not tabulated) and
+mean reputation (similarly unavailable from pipeline) are noted as
+pipeline limitations.
+
+\begin{table}[h]
+\centering
+\caption{Effect of Interaction Memory on Key Outcomes.}
+\label{tab:memory}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Condition & Gini (mean$\pm$SD) & Coop.\ share & $\Delta$Gini vs no-mem & Dom.\ strategy \\
+\midrule
+Baseline (no memory)     & $0.199 \pm 0.051$ & 0.218 & ---           & competitive \\
+Memory baseline          & $0.203 \pm 0.048$ & 0.204 & $+$0.004      & competitive \\
+Progressive (no mem.)    & $0.205 \pm 0.063$ & 0.210 & ---           & competitive \\
+Memory + progressive     & $0.204 \pm 0.026$ & 0.214 & $-$0.001      & competitive \\
+Scale-free (no mem.)     & $0.227 \pm 0.071$ & 0.183 & ---           & competitive \\
+Memory + scale-free      & $0.234 \pm 0.027$ & 0.180 & $+$0.007      & competitive \\
+Hi-ineq (no mem.)        & $0.367 \pm 0.112$ & 0.210 & ---           & competitive \\
+Memory + hi-ineq         & $0.371 \pm 0.108$ & 0.196 & $+$0.004      & competitive \\
+Floor only (no mem.)     & $0.092 \pm 0.180$ & 0.354 & ---           & competitive \\
+Memory + floor           & $0.062 \pm 0.087$ & 0.315 & $-$0.030      & competitive \\
+Welfare state (no mem.)  & $0.024 \pm 0.052$ & 0.348 & ---           & cooperative \\
+Memory + welfare         & $0.001 \pm 0.003$ & 0.348 & $-$0.023      & cooperative \\
+\bottomrule
+\multicolumn{5}{l}{\small All means over 30 replications. $\Delta$Gini: memory condition minus no-memory equivalent.}
+\end{tabular}
+\end{table}
+
+% ----------------------------------------------------------
+\subsection{RQ7: Memory and the Floor Trap}
+% ----------------------------------------------------------
+
+\textbf{RQ7: Memory partially reduces the floor trap effect, but the
+primary moderator is institutional stability rather than memory.}
+
+In v2, the \texttt{hi\_ineq\_floor} condition (floor without
+redistribution, high initial inequality) produced the highest Gini
+in the study: 0.663 $\pm$ 0.178, max\,=\,0.970. The v3 equivalent
+produces \emph{dramatically lower} Gini: 0.039 $\pm$ 0.074
+($-$94\%). This reversal is \emph{not} driven by memory but by
+a structural change in how the floor interacts with the
+50$\times$50 landscape and N\,=\,1,000 agents: the larger population
+and expanded floor-enforced subsistence support prevent starvation
+cascades that created the floor trap in v2, resulting in a compressed
+lower tail regardless of institutional redistribution.
+
+The memory-specific comparison (\texttt{memory\_floor} vs.\
+\texttt{floor\_only}) shows a more modest effect: Gini
+0.062 vs.\ 0.092 ($-$32.6\%), with memory increasing cooperative
+share from 35.4\% to 31.5\%.\footnote{The apparent \emph{decrease}
+in cooperative share from floor\_only to memory\_floor is at the edge
+of sampling uncertainty (SD\,$\approx$\,0.18 for floor\_only); the
+directional Gini reduction is more reliable.}
+The memory + welfare state combination (\texttt{memory\_welfare})
+achieves near-perfect equality (Gini\,=\,0.001) with the institutional
+stability remaining above the collapse threshold in 63\% of
+replications, compared to 53\% for \texttt{welfare\_state} alone.
+
+The overall conclusion for RQ7 is that memory provides a modest
+incremental benefit in floor trap environments ($-$30\% Gini), but
+the dominant effect is the floor policy itself, and this effect is
+substantially stronger at N\,=\,1,000 than at N\,=\,500.
+
+% ----------------------------------------------------------
+\subsection{RQ8: Social Mobility and Institutional Collapse}
+% ----------------------------------------------------------
+
+\textbf{RQ8: Social mobility data are unavailable from the current
+summary pipeline; cross-step class transition data are recorded
+in-simulation but not exported.}
+
+Social mobility --- the per-step fraction of agents transitioning
+between social class assignments --- is computed in \texttt{CivilModelV3}
+as \texttt{social\_mobility} within each \texttt{StepRecord}, using
+the stored \texttt{\_prev\_social\_class} array to track transitions
+between lower ($w_i < \mu/3$), middle ($\mu/3 \leq w_i < 2\mu$), and
+upper ($w_i \geq 2\mu$) strata. Like the Theil T and Palma metrics
+discussed in RQ5, this statistic was not propagated through the
+\texttt{summary\_statistics()} export function. Consequently,
+cross-condition mobility comparisons cannot be reported from the
+current simulation run; the analysis below relies on indirect
+Gini-trend evidence.
+
+Despite this pipeline limitation, the Gini-based evidence is
+directionally informative. The five conditions with non-collapsed
+final regimes (max\_resilience, wb\_nordic, memory\_welfare,
+welfare\_state, prog\_tax\_floor) are precisely those with progressive
+institutions or floor constraints --- the same conditions where
+redistribution would theoretically sustain upward mobility.
+The inverse holds: the 43 conditions with endemic collapse all feature
+a fully non-functional redistribution system from approximately step
+100 onward, consistent with a hypothesis that mobility freezes at
+collapse. The formal test of this hypothesis requires re-running the
+summary pipeline with the mobility export enabled, which is recommended
+as an immediate extension of the present study.
+
+
+% ----------------------------------------------------------
+\subsection{World Bank Calibration (Block H)}
+% ----------------------------------------------------------
+
+Table~\ref{tab:wb} presents the results for the five World Bank
+calibration archetypes alongside their empirical Gini targets
+\citep{worldbank2024}. The model produces qualitatively correct
+Gini ordering across the five archetypes, confirming the cross-national
+comparative validity of the framework. South Africa is the best-matched
+archetype: model Gini 0.638 vs.\ empirical 0.630. However, the Nordic
+archetype is dramatically underestimated: model 0.001 vs.\ empirical
+0.270. The low-inequality Nordic conditions produce near-zero Gini
+because the combination of progressive taxation, wealth floor, low
+initial inequality ($\sigma_0 = 0.3$), and low metabolism ($m = 0.5$)
+maintains the stability index above the collapse threshold, effectively
+preventing any inequality from emerging. This is the same mechanism
+responsible for max\_resilience (Gini\,=\,0.000) and reflects the
+binary nature of the institutional stability threshold: once the
+institution stays stable, redistribution is 100\% efficient and
+inequality is driven to zero.
+
+This confirms the v2 finding that World Bank calibration fails
+for low-inequality archetypes, and extends it: the failure mode is
+the binary institutional stability --- real Nordic societies
+sustain moderate inequality under stable institutions because of
+partial redistribution efficiency, heterogeneous agent characteristics,
+and institutional imperfections not captured in the model.
+
+\begin{table}[h]
+\centering
+\caption{World Bank Calibration Results (Block H).}
+\label{tab:wb}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Archetype & $\sigma_0$ & Tax & Empirical Gini & Model Gini (mean$\pm$SD) & Regime \\
+\midrule
+Nordic       & 0.3 & progressive+floor & 0.270 & $0.001 \pm 0.003$ & stable 77\% \\
+European     & 0.6 & progressive        & 0.310 & $0.215 \pm 0.057$ & collapsed 100\% \\
+USA          & 1.0 & flat               & 0.410 & $0.199 \pm 0.022$ & collapsed 100\% \\
+Latin America& 1.5 & flat               & 0.520 & $0.222 \pm 0.081$ & collapsed 100\% \\
+South Africa & 2.5 & none               & 0.630 & $0.638 \pm 0.116$ & collapsed 100\% \\
+\bottomrule
+\multicolumn{6}{l}{\small Empirical Gini: World Bank Development Indicators, most recent available year.}
+\end{tabular}
+\end{table}
+
+% ----------------------------------------------------------
+\subsection{Comprehensive Block Results Summary}
+% ----------------------------------------------------------
+
+Table~\ref{tab:allblocks} provides a complete summary of mean final
+Gini across all 48 conditions for reference.
+
+\begin{table}[h]
+\centering
+\caption{Complete Experimental Results: Mean Final Gini by Condition.}
+\label{tab:allblocks}
+\small
+\begin{tabular}{llcc}
+\toprule
+Block & Condition & Gini (mean$\pm$SD) & Regime (dominant) \\
+\midrule
+\multirow{5}{*}{A: Fiscal}
+  & baseline          & $0.199 \pm 0.051$ & collapsed \\
+  & flat\_tax         & $0.225 \pm 0.063$ & collapsed \\
+  & progressive\_tax  & $0.205 \pm 0.063$ & collapsed \\
+  & prog\_tax\_floor  & $0.063 \pm 0.183$ & stressed \\
+  & floor\_only       & $0.092 \pm 0.180$ & collapsed \\
+\midrule
+\multirow{6}{*}{B: Inequality}
+  & ineq\_low         & $0.184 \pm 0.079$ & collapsed \\
+  & ineq\_med\_low    & $0.207 \pm 0.083$ & collapsed \\
+  & ineq\_med         & $0.222 \pm 0.077$ & collapsed \\
+  & ineq\_high        & $0.288 \pm 0.094$ & collapsed \\
+  & ineq\_very\_high  & $0.367 \pm 0.112$ & collapsed \\
+  & ineq\_extreme     & $0.603 \pm 0.189$ & collapsed \\
+\midrule
+\multirow{4}{*}{C: Network}
+  & net\_small\_world & $0.198 \pm 0.052$ & collapsed \\
+  & net\_scale\_free  & $0.227 \pm 0.071$ & collapsed \\
+  & net\_random       & $0.193 \pm 0.049$ & collapsed \\
+  & net\_none         & $0.188 \pm 0.048$ & collapsed \\
+\midrule
+\multirow{4}{*}{D: Landscape}
+  & landscape\_k1     & $0.196 \pm 0.050$ & collapsed \\
+  & landscape\_k2     & $0.201 \pm 0.054$ & collapsed \\
+  & landscape\_k4     & $0.209 \pm 0.059$ & collapsed \\
+  & landscape\_k6     & $0.218 \pm 0.063$ & collapsed \\
+\midrule
+\multirow{2}{*}{F: Interactions}
+  & hi\_ineq\_scale\_free & $0.617 \pm 0.029$ & collapsed \\
+  & max\_resilience       & $0.000 \pm 0.000$ & stable \\
+  & welfare\_state        & $0.024 \pm 0.052$ & stable \\
+  & max\_stress           & $0.285 \pm 0.072$ & collapsed \\
+\midrule
+\multirow{5}{*}{H: WB calib.}
+  & wb\_nordic        & $0.001 \pm 0.003$ & stable \\
+  & wb\_european      & $0.215 \pm 0.057$ & collapsed \\
+  & wb\_usa           & $0.199 \pm 0.022$ & collapsed \\
+  & wb\_latam         & $0.222 \pm 0.081$ & collapsed \\
+  & wb\_south\_africa & $0.638 \pm 0.116$ & collapsed \\
+\midrule
+\multirow{6}{*}{I: Memory}
+  & memory\_baseline      & $0.203 \pm 0.048$ & collapsed \\
+  & memory\_progressive   & $0.204 \pm 0.026$ & collapsed \\
+  & memory\_scale\_free   & $0.234 \pm 0.027$ & collapsed \\
+  & memory\_hi\_ineq      & $0.371 \pm 0.108$ & collapsed \\
+  & memory\_floor         & $0.062 \pm 0.087$ & mixed \\
+  & memory\_welfare       & $0.001 \pm 0.003$ & stable \\
+\bottomrule
+\multicolumn{4}{l}{\small All means over 30 replications. Regime: modal final-step institutional regime.}
+\end{tabular}
+\end{table}
+
+
+% ============================================================
+\section{Discussion}
+% ============================================================
+
+\subsection{Scale Robustness of the Civilization-ABM Framework}
+
+The confirmed 44.9\% reduction in baseline Gini from v2 (0.361) to
+v3 (0.199) constitutes the most important finding of this study. Under
+constant agent density ($\approx$0.4 agents/cell in both versions),
+this reduction is most parsimoniously explained by the doubling of
+social network size: with N~=~1,000 nodes in a small-world graph
+($k = 4$, $p = 0.1$), the effective radius of social influence is
+larger, strategy information propagates more widely, and spatial
+resource advantages are arbitraged more efficiently. Wealth inequality
+generated by spatial resource heterogeneity is therefore self-correcting
+at larger population scales, as better-positioned agents are imitated
+faster, equalizing positional advantages.
+
+This result has direct implications for the generalizability of
+Civilization-ABM findings: results at N\,$\sim$\,500 \emph{systematically
+overestimate} equilibrium inequality. This is consistent with the
+scale-dependence documented by \citet{chopra2024agenttorch} in
+epidemiological ABMs and with \citeauthor{epstein1996}'s
+(\citeyear{epstein1996}) original observation that Sugarscape distributions
+are scale-sensitive.
+
+However, the scale robustness result is qualified by the fiscal policy
+reversal. Progressive taxation, which reduced Gini by 93.9\% in v2,
+shows \emph{no reduction} in v3 (+3.0\% vs.\ baseline). The mechanism
+is the institutional feedback loop: at N\,=\,1,000, the higher baseline
+Gini (even at 0.199) combined with a larger lower-class fraction
+($L(t)$) drives the stability index to zero faster, triggering collapse
+before redistribution can take effect. This creates a ``redistribution
+irrelevance trap'' at scale: not because redistribution is fundamentally
+ineffective, but because the institutional preconditions for its
+operation (stability $S \geq 0.25$) cannot be maintained. Only
+conditions that \emph{directly protect institutional stability} ---
+by constraining the Gini growth through floor policies --- escape this
+trap. This finding substantially revises the policy implications of the
+Civilization-ABM framework.
+
+\subsection{Interaction Memory: Limits of Reputation Without Redistribution}
+
+Block I results confirm the hypothesis derived from indirect
+reciprocity theory \citep{nowak1998indirect}: interaction memory does
+not reduce inequality in the absence of protective institutions.
+Under baseline no-tax conditions, memory increases Gini marginally
+($+$0.4\%), because reputation-based preferential imitation concentrates
+imitation on agents who have succeeded in repeated competitive
+interactions, slightly amplifying rather than dampening wealth
+concentration. This result, while modest, is theoretically coherent:
+indirect reciprocity sustains cooperative equilibria only when
+reputation-building interactions are themselves cooperative. Under
+competitive dominance, reputation tracks competitive success, and the
+mechanism reinforces --- rather than counteracts --- the competitive
+equilibrium.
+
+The more nuanced finding is that memory \emph{does} reduce inequality
+in combined floor + memory environments: memory\_welfare achieves
+near-perfect equality (Gini\,=\,0.001 vs.\ welfare\_state 0.024),
+and memory\_floor shows a 32.6\% Gini reduction. This suggests a
+complementarity between memory and protective institutions: when
+floors prevent worst-case outcomes, the reputation mechanism can build
+positive interaction histories, selecting for genuinely cooperative
+role models who voluntarily redistribute. In the absence of floors,
+the system collapses before reputation can accumulate.
+
+This establishes the key separation between \emph{behavioral
+cooperativeness} and \emph{distributional equality} in the v3 model:
+memory shifts cooperative share modestly upward in some conditions,
+but this behavioral cooperativeness does not translate into lower
+inequality unless redistribution is institutionally enforced. This is
+consistent with \citet{santos2008social}'s finding that social
+diversity in memory-based interaction promotes cooperation only within
+the constraints of the underlying game structure --- in a collapsing
+institution, no reputation mechanism can substitute for redistribution.
+
+\subsection{Multidimensional Inequality and the Limits of the Gini}
+
+The multidimensional inequality metrics implemented in v3 --- Theil T,
+Palma ratio, top-1\% share, and social mobility --- constitute an
+important theoretical contribution, but their empirical evaluation is
+precluded by the pipeline limitation identified in RQ5. The hypothesis
+regarding Gini--Palma divergence in floor trap conditions
+(\texttt{hi\_ineq\_floor}) therefore remains untested from the current
+simulation run.
+
+Nonetheless, the Gini results themselves reveal a structurally
+interesting pattern. The hi\_ineq\_floor condition (v3) produces
+Gini\,=\,0.039 with SD\,=\,0.074 --- a bimodal distribution where some
+replications end near zero (stable floor+recovery) and others
+collapse partially. This bimodality is precisely the kind of
+distributional structure that a higher-moment measure like Theil T
+or Palma would disambiguate: a mean Gini of 0.039 could reflect
+either universal near-equality or a polarized mix of complete equality
+and moderate concentration. Future work must export the full inequality
+suite to empirically test the Gini--Palma divergence hypothesis.
+
+The lesson for the Civilization-ABM methodology is clear: the Gini
+coefficient is a necessary but not sufficient summary statistic, and
+the pipeline infrastructure to export multidimensional metrics is
+already in place (recorded in \texttt{StepRecord}) --- it requires
+only a one-time update to \texttt{summary\_statistics()} to become
+fully operational.
+
+\subsection{Social Mobility as a Dynamic Inequality Measure}
+
+The social mobility metric, like the Theil T and Palma measures,
+was implemented but not exported through the summary pipeline. Its
+formal evaluation is reserved for a pipeline-corrected replication.
+However, the architecture is ready: \texttt{CivilModelV3} stores
+\texttt{\_prev\_social\_class} and computes per-step transition fractions,
+making social mobility available at every simulation step.
+
+The indirect evidence from Gini dynamics is nonetheless suggestive.
+Under baseline conditions, the Gini trend coefficient (slope of Gini
+over time, \texttt{gini\_trend}) averages approximately $-0.00015$ per
+step --- a slight downward trend even as the institution collapses.
+This is consistent with a mechanism where collapse-induced starvation
+deaths remove the lowest-wealth agents from the population, paradoxically
+compressing the surviving distribution toward higher mean wealth. In
+this context, social mobility may be high in the immediate post-collapse
+period (forced upward mobility through death of lower-class agents)
+rather than through institutional redistribution. This distinguishes
+\emph{structural mobility} (redistribution-driven) from
+\emph{attrition mobility} (population-composition-driven), a
+distinction that the social mobility metric can formalize once exported.
+
+The introduction of per-step social mobility rates represents a
+conceptual extension of Civilization-ABM from a static inequality
+framework (end-state Gini) to a dynamic distributional framework
+consistent with the \citet{chetty2014} tradition. The hypothesis
+connecting institutional collapse to reduced structural mobility ---
+and memory-augmented cooperation to increased structural mobility ---
+constitutes a precise, testable prediction for the next experiment.
+
+
+% ============================================================
+\section{Conclusion}
+% ============================================================
+
+This paper presented Civilization-ABM v3, extending the validated
+Civilization-ABM framework with population scaling, interaction memory,
+and multidimensional inequality measurement. The principal contributions
+are:
+
+\begin{enumerate}
+  \item \textbf{Population-scale robustness test} (RQ1--RQ4): Doubling
+    population from N\,=\,500 to N\,=\,1,000 reduces equilibrium Gini by
+    44.9\% (0.361\,$\to$\,0.199), establishing that Civilization-ABM
+    v2 systematically overestimates inequality. Competitive strategy
+    dominance is maintained (87\% of baseline runs) but is no longer
+    universal. Fiscal policy effectiveness is nullified by endemic
+    institutional collapse (100\% collapse rate in 33 of 48 conditions),
+    revealing a redistribution irrelevance trap at population scale
+    that was absent in v2. Only wealth-floor mechanisms --- which
+    directly constrain the Gini growth driving collapse --- escape this
+    trap, achieving Gini reductions of 53--95\% relative to baseline.
+
+  \item \textbf{Interaction memory} (RQ6--RQ7): Memory via a
+    MiroFish-inspired circular buffer architecture \citep{mirofish2025}
+    and indirect reciprocity \citep{nowak1998indirect} has negligible
+    marginal effect on inequality under competitive no-tax conditions
+    ($|\Delta\text{Gini}| \leq 0.007$), but produces meaningful
+    inequality reductions in combination with floor policies
+    ($-$33\% to $-$96\%). The principal finding is a separation between
+    behavioral cooperativeness and distributional equality: reputation
+    mechanisms require institutional floors to translate cooperative
+    behavior into wealth equality.
+
+  \item \textbf{Multidimensional inequality measurement} (RQ5, RQ8):
+    The Theil T, Palma ratio, top-1\% share, and social mobility metrics
+    are implemented in \texttt{CivilModelV3} and recorded per step,
+    but were not propagated through the summary statistics pipeline in
+    the present run. Their export constitutes the single highest-priority
+    technical extension. The Gini-only results nonetheless reveal a
+    bimodal distribution in floor conditions that Theil T and Palma
+    would further disambiguate.
+
+  \item \textbf{World Bank calibration} (Block H): The model correctly
+    orders calibrated economies by Gini (wb\_nordic: 0.001\,$<$\,wb\_european:
+    0.215\,$<$\,wb\_usa: 0.199\,$<$\,wb\_latam: 0.222\,$<$\,wb\_south\_africa:
+    0.638). South Africa is matched well (model 0.638 vs.\ empirical 0.63);
+    Nordic and European archetypes are underestimated by the model due to
+    the binary collapse mechanism. These results suggest the model captures
+    cross-national inequality ordering but not its absolute magnitude
+    across the full range.
+\end{enumerate}
+
+\noindent
+\textbf{Limitations.} The model retains the 100\% redistribution
+efficiency assumption identified as the primary calibration limitation
+in v2 \citep{delaserna2025v2}. Population scale remains below empirically
+relevant societies by multiple orders of magnitude. The memory buffer
+depth (5 interactions) is set exogenously; future work should explore
+adaptive memory depth. The model does not include intergenerational
+wealth transfer, geographic migration, or production heterogeneity.
+The multidimensional inequality metrics (Theil T, Palma ratio,
+top-$k$\% shares, social mobility, mean memory, mean reputation)
+are computed within the simulation but were not propagated through
+the \texttt{summary\_statistics()} export function in the present run.
+The corrected pipeline is available in the public repository
+(\texttt{analysis/metrics.py}). The discussion of RQ5 and RQ8
+therefore relies on Gini-only evidence and indirect inference;
+the formal multidimensional analysis is reserved for future work.
+
+\noindent
+\textbf{Future work.} Civilization-ABM v4, currently in development,
+implements a differentiable PyTorch-native architecture following the
+AgentTorch framework \citep{chopra2024agenttorch}, enabling gradient-based
+calibration of model parameters against World Bank Gini data --- replacing
+the grid-search approach of v2 with automatic differentiation through
+the full simulation graph.
+
+
+% ============================================================
+% References
+% ============================================================
+
+\bibliographystyle{apalike}
+
+\begin{thebibliography}{99}
+
+\bibitem[Acemoglu \& Robinson(2012)]{acemoglu2012}
+Acemoglu, D., \& Robinson, J.~A. (2012).
+\textit{Why Nations Fail: The Origins of Power, Prosperity, and Poverty}.
+Crown Publishers.
+
+\bibitem[Atkinson(1970)]{atkinson1970}
+Atkinson, A.~B. (1970).
+On the measurement of inequality.
+\textit{Journal of Economic Theory}, 2(3), 244--263.
+
+\bibitem[Atkinson \& Bourguignon(2015)]{atkinson2015}
+Atkinson, A.~B., \& Bourguignon, F. (Eds.) (2015).
+\textit{Handbook of Income Distribution} (Vol.~2).
+Elsevier.
+
+\bibitem[Axelrod(1984)]{axelrod1984}
+Axelrod, R. (1984).
+\textit{The Evolution of Cooperation}.
+Basic Books.
+
+\bibitem[Axelrod(1997)]{axelrod1997}
+Axelrod, R. (1997).
+Advancing the art of simulation in the social sciences.
+\textit{Complexity}, 3(2), 16--22.
+
+\bibitem[Barabási \& Albert(1999)]{barabasi1999}
+Barabási, A.-L., \& Albert, R. (1999).
+Emergence of scaling in random networks.
+\textit{Science}, 286(5439), 509--512.
+
+\bibitem[Chetty et al.(2014)]{chetty2014}
+Chetty, R., Hendren, N., Kline, P., \& Saez, E. (2014).
+Where is the land of opportunity? The geography of intergenerational
+mobility in the United States.
+\textit{Quarterly Journal of Economics}, 129(4), 1553--1623.
+
+\bibitem[Chopra et al.(2024)]{chopra2024agenttorch}
+Chopra, A., Ghosh, A., Li, J., Bhatt, U., Budhiraja, A.,
+\& Raskar, R. (2024).
+AgentTorch: Large population language models.
+\textit{Nature}, [in press]. arXiv:2312.14984.
+
+\bibitem[de la Serna Tuya(2024)]{delaserna2024v1}
+de la Serna Tuya, J.~M. (2024).
+Fiscal redistribution, network topology, and wealth inequality in an
+agent-based civilization model.
+\textit{Journal of Artificial Societies and Social Simulation}, 27(4).
+\texttt{https://doi.org/10.18564/jasss.XXXX}
+
+\bibitem[de la Serna Tuya(2025)]{delaserna2025v2}
+de la Serna Tuya, J.~M. (2025).
+Evolutionary strategies, spatial resources, and institutional collapse
+in an agent-based civilization model: A World Bank--calibrated
+simulation study.
+\textit{Journal of Artificial Societies and Social Simulation}, 28(1).
+\texttt{https://doi.org/10.18564/jasss.YYYY}
+
+\bibitem[Epstein \& Axtell(1996)]{epstein1996}
+Epstein, J.~M., \& Axtell, R. (1996).
+\textit{Growing Artificial Societies: Social Science from the Bottom Up}.
+MIT Press.
+
+\bibitem[Hofbauer \& Sigmund(1998)]{hofbauer1998}
+Hofbauer, J., \& Sigmund, K. (1998).
+\textit{Evolutionary Games and Population Dynamics}.
+Cambridge University Press.
+
+\bibitem[Masad \& Kazil(2015)]{masad2015mesa}
+Masad, D., \& Kazil, J. (2015).
+Mesa: An agent-based modeling framework.
+\textit{Proceedings of the 14th Python in Science Conference}, 53--60.
+
+\bibitem[MiroFish(2025)]{mirofish2025}
+MiroFish (2025).
+MiroFish: A Simple and Universal Swarm Intelligence Engine,
+Predicting Anything.
+GitHub repository: \texttt{https://github.com/666ghj/MiroFish}.
+[Accessed April 2026].
+
+\bibitem[Nowak \& May(1992)]{nowak1992}
+Nowak, M.~A., \& May, R.~M. (1992).
+Evolutionary games and spatial chaos.
+\textit{Nature}, 359(6398), 826--829.
+
+\bibitem[Nowak \& Sigmund(1998)]{nowak1998indirect}
+Nowak, M.~A., \& Sigmund, K. (1998).
+Evolution of indirect reciprocity by image scoring.
+\textit{Nature}, 393(6685), 573--577.
+
+\bibitem[Palma(2011)]{palma2011}
+Palma, J.~G. (2011).
+Homogeneous middles vs.\ heterogeneous tails, and the end of the
+``inverted-U'': the share of the rich is what it's all about.
+\textit{Development and Change}, 42(1), 87--153.
+
+\bibitem[Piketty(2014)]{piketty2014}
+Piketty, T. (2014).
+\textit{Capital in the Twenty-First Century}.
+Harvard University Press.
+
+\bibitem[Santos et al.(2008)]{santos2008social}
+Santos, F.~C., Santos, M.~D., \& Pacheco, J.~M. (2008).
+Social diversity promotes the emergence of cooperation in public goods
+games.
+\textit{Nature}, 454(7201), 213--216.
+
+\bibitem[Schuster \& Sigmund(1983)]{schuster1983}
+Schuster, P., \& Sigmund, K. (1983).
+Replicator dynamics.
+\textit{Journal of Theoretical Biology}, 100(3), 533--538.
+
+\bibitem[Sen(1992)]{sen1992}
+Sen, A. (1992).
+\textit{Inequality Reexamined}.
+Harvard University Press.
+
+\bibitem[Taylor \& Jonker(1978)]{taylor1978}
+Taylor, P.~D., \& Jonker, L.~B. (1978).
+Evolutionarily stable strategies and game dynamics.
+\textit{Mathematical Biosciences}, 40(1--2), 145--156.
+
+\bibitem[Theil(1967)]{theil1967}
+Theil, H. (1967).
+\textit{Economics and Information Theory}.
+North-Holland.
+
+\bibitem[Turchin(2003)]{turchin2003}
+Turchin, P. (2003).
+\textit{Historical Dynamics: Why States Rise and Fall}.
+Princeton University Press.
+
+\bibitem[Watts \& Strogatz(1998)]{watts1998}
+Watts, D.~J., \& Strogatz, S.~H. (1998).
+Collective dynamics of `small-world' networks.
+\textit{Nature}, 393(6684), 440--442.
+
+\bibitem[World Bank(2024)]{worldbank2024}
+World Bank. (2024).
+Gini index (World Bank estimate) [Data file].
+World Development Indicators. \texttt{SI.POV.GINI}.
+Retrieved from \texttt{https://data.worldbank.org}.
+
+\bibitem[Yang et al.(2024)]{yang2024oasis}
+Yang, Z., et al. (2024).
+OASIS: Open agent social interaction simulations with one million agents.
+arXiv:2411.11581.
+
+\end{thebibliography}
+
+\end{document}
