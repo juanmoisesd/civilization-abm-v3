@@ -175,3 +175,12 @@ python main_v3.py --condition baseline --reps 5
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
+
+## How to Cite
+
+If you use this repository in your research, please cite:
+
+> de la Serna, J. M. (2026). *Civilization Abm V3*. Universidad Internacional de La Rioja (UNIR).
+> https://github.com/juanmoisesd/civilization-abm-v3 
+
+See `CITATION.cff` for formatted references.
